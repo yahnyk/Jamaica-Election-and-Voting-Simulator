@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jamaica Decides — Election &amp; Voting Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#111311;
+    --gold:#F5B700;
+    --gold-deep:#C98E00;
+    --green:#0A7B3E;
+    --green-deep:#065C2C;
+    --coral:#FF5A3C;
+    --paper:#FFF6E1;
+    --paper-2:#FFFFFF;
+    --jlp:#0A7B3E;
+    --pnp:#E8552A;
+    --jpp:#1C8FA6;
+    --shadow: 6px 6px 0 rgba(17,19,17,0.9);
+    --shadow-sm: 3px 3px 0 rgba(17,19,17,0.9);
+    --radius: 18px;
+    font-size: 16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 10% 10%, rgba(245,183,0,0.25), transparent 40%),
+      radial-gradient(circle at 90% 20%, rgba(10,123,62,0.18), transparent 45%),
+      var(--paper);
+    color:var(--ink);
+    font-family:'Nunito', sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  h1,h2,h3, .display{
+    font-family:'Fredoka', sans-serif;
+    font-weight:700;
+    letter-spacing:0.2px;
+  }
+  .screen{ display:none; min-height:100vh; padding-bottom:60px; }
+  .screen.active{ display:block; animation: fadeIn .4s ease; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+
+  /* ---- NAV ---- */
+  nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 22px; background:var(--ink); color:var(--paper);
+    position:sticky; top:0; z-index:50;
+    border-bottom:4px solid var(--gold);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand .stamp{
+    width:34px; height:34px; border-radius:50%;
+    background:var(--gold); display:flex; align-items:center; justify-content:center;
+    font-size:18px; border:3px solid var(--paper);
+  }
+  .brand span{ font-family:'Fredoka'; font-weight:700; font-size:1.15rem; }
+  .navlinks{ display:flex; gap:8px; flex-wrap:wrap; }
+  .navlinks button{
+    background:transparent; color:var(--paper); border:2px solid rgba(255,246,225,0.4);
+    padding:7px 14px; border-radius:999px; font-family:'Nunito'; font-weight:700;
+    font-size:0.85rem; cursor:pointer; transition:.15s;
+  }
+  .navlinks button:hover, .navlinks button.current{ background:var(--gold); color:var(--ink); border-color:var(--gold);}
+  .navlinks button:focus-visible, button:focus-visible, .choice-card:focus-visible{ outline:3px solid var(--coral); outline-offset:2px; }
+
+  .wrap{ max-width:980px; margin:0 auto; padding:40px 22px; }
+  .wrap.narrow{ max-width:760px; }
+
+  .eyebrow{
+    display:inline-block; font-family:'Fredoka'; font-weight:600; font-size:0.78rem;
+    letter-spacing:1.5px; text-transform:uppercase; background:var(--ink); color:var(--gold);
+    padding:5px 12px; border-radius:999px; margin-bottom:14px;
+  }
+
+  /* ---- BUTTONS (ink stamp signature) ---- */
+  .btn{
+    font-family:'Fredoka'; font-weight:600; font-size:1rem; cursor:pointer;
+    border:3px solid var(--ink); border-radius:14px; padding:13px 26px;
+    background:var(--gold); color:var(--ink); box-shadow:var(--shadow);
+    transition: transform .08s ease, box-shadow .08s ease; position:relative;
+  }
+  .btn:hover{ transform:translate(-2px,-2px); box-shadow:8px 8px 0 rgba(17,19,17,0.9); }
+  .btn:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 rgba(17,19,17,0.9); }
+  .btn.stamped::after{
+    content:''; position:absolute; inset:0; border-radius:14px;
+    background:radial-gradient(circle, rgba(17,19,17,0.35) 0%, transparent 70%);
+    opacity:0; transform:scale(0.4); pointer-events:none;
+  }
+  .btn.stamped.hit::after{ animation:stamp .45s ease-out; }
+  @keyframes stamp{ 0%{opacity:.9; transform:scale(0.2);} 100%{opacity:0; transform:scale(1.6);} }
+  .btn.secondary{ background:var(--paper-2); }
+  .btn.green{ background:var(--green); color:var(--paper); border-color:var(--green-deep); }
+  .btn.coral{ background:var(--coral); color:var(--paper); }
+  .btn:disabled{ opacity:0.4; cursor:not-allowed; box-shadow:none; transform:none; }
+  .btn-row{ display:flex; gap:12px; flex-wrap:wrap; margin-top:22px; }
+
+  /* ---- HERO ---- */
+  .hero{ text-align:center; padding:70px 22px 40px; position:relative; }
+  .hero h1{ font-size:clamp(2.4rem, 6vw, 4rem); line-height:1.02; margin:0 0 14px; }
+  .hero h1 .hl{ color:var(--green); }
+  .hero h1 .hl2{ color:var(--coral); }
+  .hero p.lede{ font-size:1.15rem; max-width:560px; margin:0 auto 26px; color:#3a3a38; }
+  .flagbar{ display:flex; justify-content:center; gap:6px; margin-bottom:26px; }
+  .flagbar span{ width:46px; height:10px; border-radius:4px; }
+  .flagbar span:nth-child(1){ background:var(--green); }
+  .flagbar span:nth-child(2){ background:var(--ink); }
+  .flagbar span:nth-child(3){ background:var(--gold); }
+  .flagbar span:nth-child(4){ background:var(--ink); }
+  .flagbar span:nth-child(5){ background:var(--green); }
+  .island-hero{ display:flex; justify-content:center; margin:10px 0 20px; }
+
+  /* ---- CARDS ---- */
+  .card{
+    background:var(--paper-2); border:3px solid var(--ink); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:22px;
+  }
+  .grid{ display:grid; gap:18px; }
+  .grid.cols-3{ grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); }
+  .grid.cols-2{ grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); }
+
+  /* ---- TIMELINE (learn screen) ---- */
+  .timeline{ display:flex; flex-direction:column; gap:0; margin-top:30px; }
+  .tl-item{ display:flex; gap:18px; position:relative; padding-bottom:34px; }
+  .tl-item:last-child{ padding-bottom:0; }
+  .tl-marker{
+    flex:0 0 auto; width:44px; height:44px; border-radius:50%; background:var(--green);
+    color:var(--paper); display:flex; align-items:center; justify-content:center;
+    font-family:'Fredoka'; font-weight:700; border:3px solid var(--ink); z-index:2;
+  }
+  .tl-item:not(:last-child)::before{
+    content:''; position:absolute; left:21px; top:44px; bottom:0; width:3px; background:var(--ink); opacity:0.25;
+  }
+  .tl-body h3{ margin:2px 0 4px; font-size:1.05rem; }
+  .tl-body p{ margin:0; color:#3a3a38; line-height:1.45; }
+
+  /* ---- PARTY PICK ---- */
+  .party-card{
+    border-radius:var(--radius); border:3px solid var(--ink); box-shadow:var(--shadow);
+    padding:22px; text-align:center; cursor:pointer; background:var(--paper-2);
+    transition:transform .12s ease;
+  }
+  .party-card:hover{ transform:translateY(-4px); }
+  .party-card.selected{ outline:4px solid var(--coral); }
+  .party-swatch{ width:64px; height:64px; border-radius:50%; margin:0 auto 12px; border:3px solid var(--ink); }
+  .party-card h3{ margin:0 0 4px; }
+  .party-card p{ margin:2px 0; font-size:0.9rem; color:#3a3a38; }
+
+  /* ---- CAMPAIGN MAP ---- */
+  .campaign-layout{ display:grid; grid-template-columns: 1.1fr 1fr; gap:22px; }
+  @media(max-width:800px){ .campaign-layout{ grid-template-columns:1fr; } }
+  .budget-bar{
+    display:flex; align-items:center; gap:12px; background:var(--ink); color:var(--paper);
+    padding:12px 18px; border-radius:14px; margin-bottom:18px; font-family:'Fredoka'; font-weight:600;
+  }
+  .budget-track{ flex:1; height:14px; background:rgba(255,246,225,0.2); border-radius:999px; overflow:hidden; }
+  .budget-fill{ height:100%; background:var(--gold); transition:width .3s ease; }
+
+  .const-list{ display:flex; flex-direction:column; gap:12px; }
+  .const-card{
+    border:3px solid var(--ink); border-radius:14px; padding:14px 16px; background:var(--paper-2);
+    box-shadow:var(--shadow-sm); cursor:pointer;
+  }
+  .const-card.active{ outline:3px solid var(--coral); }
+  .const-card h4{ margin:0 0 8px; font-family:'Fredoka'; font-size:1rem; display:flex; justify-content:space-between; }
+  .const-card h4 .parish{ font-size:0.72rem; color:#6b6b68; font-weight:400; font-family:'Nunito'; align-self:center; }
+  .bar-row{ display:flex; align-items:center; gap:8px; margin-bottom:5px; font-size:0.78rem; }
+  .bar-row .label{ width:44px; flex:0 0 auto; font-weight:800; }
+  .bar-track{ flex:1; height:12px; background:#eee; border-radius:999px; overflow:hidden; border:1px solid rgba(17,19,17,0.15); }
+  .bar-fill{ height:100%; transition:width .4s ease; }
+  .bar-row .pct{ width:36px; text-align:right; font-variant-numeric:tabular-nums; }
+  .uncontested-tag{ font-size:0.68rem; background:var(--ink); color:var(--gold); padding:2px 8px; border-radius:999px; }
+
+  .actions-panel{ position:sticky; top:88px; align-self:start; }
+  .action-btn{
+    width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:10px; padding:12px 16px;
+  }
+  .action-btn .cost{ font-size:0.8rem; opacity:0.75; }
+  .action-desc{ font-size:0.8rem; color:#3a3a38; margin:-4px 0 12px 4px; }
+
+  /* ---- QUIZ MODAL (debate) ---- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(17,19,17,0.55); display:none;
+    align-items:center; justify-content:center; z-index:100; padding:20px;
+  }
+  .overlay.active{ display:flex; }
+  .modal{ background:var(--paper-2); border:3px solid var(--ink); border-radius:var(--radius); box-shadow:var(--shadow); max-width:480px; width:100%; padding:26px; }
+  .modal h3{ margin-top:0; }
+  .quiz-opts{ display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+  .quiz-opts button{ text-align:left; }
+
+  /* ---- ELECTION NIGHT ---- */
+  .result-row{
+    display:flex; align-items:center; gap:14px; padding:14px 16px; border:3px solid var(--ink);
+    border-radius:14px; margin-bottom:10px; background:var(--paper-2); opacity:0; transform:translateX(-14px);
+  }
+  .result-row.show{ animation: slideIn .45s ease forwards; }
+  @keyframes slideIn{ to{opacity:1; transform:translateX(0);} }
+  .result-row .winner-dot{ width:20px; height:20px; border-radius:50%; flex:0 0 auto; border:2px solid var(--ink); }
+  .result-row .rname{ font-weight:800; flex:1; min-width:120px; }
+  .result-row .rwinner{ font-size:0.85rem; color:#3a3a38; }
+  .ink-stamp-mark{ font-size:1.3rem; }
+
+  .scoreboard{ display:flex; gap:16px; justify-content:center; margin:26px 0; flex-wrap:wrap; }
+  .seat-tile{
+    text-align:center; padding:18px 22px; border-radius:16px; border:3px solid var(--ink); box-shadow:var(--shadow-sm);
+    min-width:120px; color:var(--paper);
+  }
+  .seat-tile .n{ font-family:'Fredoka'; font-size:2.2rem; display:block; }
+
+  .confetti{ position:fixed; width:10px; height:14px; top:-20px; z-index:200; pointer-events:none; }
+
+  footer.pagefoot{ text-align:center; padding:30px 20px; color:#6b6b68; font-size:0.85rem; }
+
+  .fact-card{ background:var(--green); color:var(--paper); border-radius:var(--radius); padding:20px; border:3px solid var(--ink); box-shadow:var(--shadow-sm); }
+  .fact-card h4{ margin:0 0 6px; font-family:'Fredoka'; }
+
+  /* vote steps */
+  .vote-steps{ display:flex; flex-direction:column; gap:10px; margin-top:20px;}
+  .vote-step{ display:none; }
+  .vote-step.active{ display:block; }
+  .ballot{
+    border:3px dashed var(--ink); border-radius:12px; padding:16px; background:#fffdf5; margin-top:14px;
+  }
+  .ballot-row{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border:2px solid var(--ink); border-radius:10px; margin-bottom:8px; cursor:pointer; background:var(--paper-2); }
+  .ballot-row.marked{ background:#fff2c9; }
+  .finger{ width:60px; height:90px; border-radius:30px 30px 34px 34px; border:3px solid var(--ink); margin:14px auto 6px; background:linear-gradient(180deg,#f2c9a0 0%, #f2c9a0 78%, #2b2560 78%); position:relative; }
+  .step-progress{ display:flex; gap:6px; margin-bottom:16px; }
+  .step-progress span{ height:6px; flex:1; background:#e6e2d3; border-radius:999px; }
+  .step-progress span.done{ background:var(--green); }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="brand"><div class="stamp">🗳️</div><span>Jamaica Decides</span></div>
+  <div class="navlinks">
+    <button data-goto="screen-home">Home</button>
+    <button data-goto="screen-learn">How Elections Work</button>
+    <button data-goto="screen-vote">How to Vote</button>
+    <button data-goto="screen-party">Play the Campaign</button>
+  </div>
+</nav>
+
+<!-- HOME -->
+<section id="screen-home" class="screen active">
+  <div class="hero">
+    <div class="flagbar"><span></span><span></span><span></span><span></span><span></span></div>
+    <span class="eyebrow">A Civics Game</span>
+    <h1>Run a campaign.<br><span class="hl">Count the votes.</span><br><span class="hl2">Learn how it really works.</span></h1>
+    <p class="lede">Jamaica Decides is a pretend election built from the real rules the Electoral Commission of Jamaica uses — First-Past-the-Post voting, real constituencies, and the actual steps of a polling day.</p>
+    <div class="btn-row" style="justify-content:center;">
+      <button class="btn stamped" data-goto="screen-party">🎤 Start a Campaign</button>
+      <button class="btn secondary stamped" data-goto="screen-learn">📖 Learn the Rules First</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="grid cols-3">
+      <div class="card">
+        <h3>🗺️ 7 Real Constituencies</h3>
+        <p>From Kingston Western to St. Catherine East Central — win seats using the same First-Past-the-Post system Jamaica uses.</p>
+      </div>
+      <div class="card">
+        <h3>📣 Run a Real Campaign</h3>
+        <p>Spend a campaign budget on rallies, ads, canvassing and debates to win over voters, constituency by constituency.</p>
+      </div>
+      <div class="card">
+        <h3>🖊️ Learn to Vote</h3>
+        <p>Walk through what actually happens at a polling station — from checking your ID to dipping your finger in indelible ink.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LEARN -->
+<section id="screen-learn" class="screen">
+  <div class="wrap narrow">
+    <span class="eyebrow">Before You Play</span>
+    <h2>How a Jamaican General Election Works</h2>
+    <p>Every election follows the same sequence, set out in the Constitution and the Representation of the People Act (ROPA). Here's the order events happen in, start to finish.</p>
+    <div class="timeline" id="timeline"></div>
+    <div class="btn-row">
+      <button class="btn stamped" data-goto="screen-vote">Next: How to Vote →</button>
+    </div>
+  </div>
+</section>
+
+<!-- HOW TO VOTE -->
+<section id="screen-vote" class="screen">
+  <div class="wrap narrow">
+    <span class="eyebrow">Polling Day</span>
+    <h2>Try Casting a Ballot</h2>
+    <p>Polls in Jamaica are open 7:00 a.m. to 5:00 p.m. Here's what happens when a voter walks in. Click through each step.</p>
+    <div class="step-progress" id="voteProgress"></div>
+
+    <div class="card">
+      <div class="vote-step active" data-step="0">
+        <h3>1. Verify your identity</h3>
+        <p>A presiding officer checks your ID and looks for indelible ink already on your finger, so nobody can vote twice.</p>
+        <button class="btn stamped" data-vote-next>Show my ID →</button>
+      </div>
+      <div class="vote-step" data-step="1">
+        <h3>2. Receive your ballot</h3>
+        <p>Once you're verified, you're handed an official ballot paper listing every candidate in your constituency.</p>
+        <button class="btn stamped" data-vote-next>Take the ballot →</button>
+      </div>
+      <div class="vote-step" data-step="2">
+        <h3>3. Mark it in private</h3>
+        <p>In a private booth, mark an X next to the one candidate you're voting for. Try it below.</p>
+        <div class="ballot" id="ballotDemo"></div>
+        <button class="btn stamped" data-vote-next disabled id="ballotNextBtn">Fold my ballot →</button>
+      </div>
+      <div class="vote-step" data-step="3">
+        <h3>4. Deposit the ballot</h3>
+        <p>Fold your ballot and place it in the sealed ballot box in full view of the polling staff.</p>
+        <div style="text-align:center; font-size:3rem;">📥</div>
+        <button class="btn stamped" data-vote-next>Drop it in →</button>
+      </div>
+      <div class="vote-step" data-step="4">
+        <h3>5. Dip your finger in ink</h3>
+        <p>Last step: dip a finger in indelible ink. It won't wash off for days — proof you've already voted.</p>
+        <div class="finger" aria-hidden="true"></div>
+        <p style="text-align:center; font-weight:800;">🎉 You voted!</p>
+        <button class="btn coral stamped" data-goto="screen-party">Now run a campaign →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PARTY PICK -->
+<section id="screen-party" class="screen">
+  <div class="wrap narrow">
+    <span class="eyebrow">Step 1 of 2</span>
+    <h2>Choose Your Party</h2>
+    <p>You'll manage this party's campaign across all 7 constituencies. Pick who you're running for.</p>
+    <div class="grid cols-3" id="partyGrid"></div>
+    <div class="btn-row">
+      <button class="btn stamped" id="beginCampaignBtn" disabled>Begin the Campaign →</button>
+    </div>
+  </div>
+</section>
+
+<!-- CAMPAIGN -->
+<section id="screen-campaign" class="screen">
+  <div class="wrap">
+    <span class="eyebrow" id="campaignPartyLabel">Step 2 of 2</span>
+    <h2>Campaign Trail</h2>
+    <p>Spend your campaign budget across constituencies, then call the election when you're ready.</p>
+    <div class="budget-bar">
+      <span>💰 Budget</span>
+      <div class="budget-track"><div class="budget-fill" id="budgetFill" style="width:100%"></div></div>
+      <span id="budgetLabel">100 / 100</span>
+    </div>
+    <div class="campaign-layout">
+      <div>
+        <h3 style="margin-top:0;">Constituencies</h3>
+        <div class="const-list" id="constList"></div>
+      </div>
+      <div class="actions-panel card">
+        <h3 style="margin-top:0;">Campaign Actions</h3>
+        <p id="selectedConstLabel" style="font-weight:800;">Select a constituency →</p>
+        <button class="btn action-btn stamped" data-action="canvass"><span>🚪 Canvass door-to-door</span><span class="cost">$10</span></button>
+        <p class="action-desc">Small, reliable boost in one constituency.</p>
+        <button class="btn action-btn stamped" data-action="rally"><span>🎤 Hold a rally</span><span class="cost">$20</span></button>
+        <p class="action-desc">Big boost here — but rivals get a little sympathy elsewhere.</p>
+        <button class="btn action-btn stamped" data-action="debate"><span>🗣️ Join a debate</span><span class="cost">$25</span></button>
+        <p class="action-desc">Guess the constituency's top issue right for a big win.</p>
+        <button class="btn action-btn stamped" data-action="ad" id="adBtn"><span>📺 Run a national ad</span><span class="cost">$30</span></button>
+        <p class="action-desc">Small boost everywhere at once.</p>
+        <div class="btn-row">
+          <button class="btn coral stamped" id="callElectionBtn">🏁 Call the Election</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ELECTION NIGHT -->
+<section id="screen-night" class="screen">
+  <div class="wrap narrow">
+    <span class="eyebrow">Election Night</span>
+    <h2>Counting the Votes</h2>
+    <p>Polls have closed at 5:00 p.m. Counting begins immediately — here are the results, constituency by constituency.</p>
+    <div id="resultsList"></div>
+    <div class="btn-row" style="justify-content:center; display:none;" id="nightNextRow">
+      <button class="btn stamped" id="showScoreboardBtn">See Final Results →</button>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL SCOREBOARD -->
+<section id="screen-final" class="screen">
+  <div class="wrap narrow" style="text-align:center;">
+    <span class="eyebrow">Final Results</span>
+    <h2 id="winnerHeadline">And the winner is...</h2>
+    <div class="scoreboard" id="scoreboard"></div>
+    <p id="pmLine" style="font-size:1.1rem; font-weight:700;"></p>
+    <div class="fact-card" style="text-align:left; margin-top:26px;">
+      <h4>🎓 What you just practiced</h4>
+      <p>Each seat went to whoever got the most votes in that constituency — that's First-Past-the-Post. A party doesn't need 50% to win a seat, just more votes than any single rival. The party with the most seats overall — not the most total votes nationwide — forms the government, and its leader becomes Prime Minister.</p>
+    </div>
+    <div class="btn-row" style="justify-content:center;">
+      <button class="btn stamped" id="playAgainBtn">🔁 Run Another Campaign</button>
+      <button class="btn secondary stamped" data-goto="screen-learn">📖 Review the Rules</button>
+    </div>
+  </div>
+</section>
+
+<footer class="pagefoot">Built for civics learning · Candidate and constituency data adapted from the 2025 nomination lists · Jamaica Decides is an educational simulation, not an official result.</footer>
+
+<div class="overlay" id="quizOverlay">
+  <div class="modal">
+    <h3>🗣️ Debate Night</h3>
+    <p id="quizPrompt"></p>
+    <div class="quiz-opts" id="quizOpts"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- DATA ---------------- */
+  const PARTIES = {
+    JLP: { name:"Jamaica Labour Party", abbr:"JLP", leader:"Andrew Holness", color:"#0A7B3E" },
+    PNP: { name:"People's National Party", abbr:"PNP", leader:"Mark Golding", color:"#E8552A" },
+    JPP: { name:"Jamaica Progressive Party", abbr:"JPP", leader:"(Minor party)", color:"#1C8FA6" }
+  };
+
+  const ISSUES = ["Economy","Crime","Education","Healthcare"];
+
+  // Constituencies fully contested by all three parties power the core game.
+  // Constituencies with fewer nominated candidates (per demo data) are shown as
+  // real examples of safe / lightly-contested seats.
+  const CONSTITUENCIES = [
+    { id:"kw", name:"Kingston Western", parish:"Kingston", topIssue:"Crime",
+      candidates:{ JLP:"Desmond A. McKenzie", PNP:"Joseph Witter", JPP:"Ricardo Williams" },
+      support:{ JLP:34, PNP:34, JPP:32 } },
+    { id:"kc", name:"Kingston Central", parish:"Kingston", topIssue:"Economy",
+      candidates:{ JLP:"Donovan St. L. Williams", PNP:"Steve O. McGregor", JPP:"Garth Wayne Barnett" },
+      support:{ JLP:33, PNP:35, JPP:32 } },
+    { id:"kepr", name:"Kingston East and Port Royal", parish:"Kingston", topIssue:"Healthcare",
+      candidates:{ JLP:"Courtney R. Burnett", PNP:"Phillip F. Paulwell", JPP:"George W. Williams" },
+      support:{ JLP:32, PNP:36, JPP:32 } },
+    { id:"sawr", name:"St. Andrew West Rural", parish:"St. Andrew", topIssue:"Education",
+      candidates:{ JLP:"Juliet Cuthbert-Flynn", PNP:"Joan Astaire Gordon-Webley", JPP:"George Steven Roach" },
+      support:{ JLP:35, PNP:33, JPP:32 } },
+    { id:"saw", name:"St. Andrew Western", parish:"St. Andrew", topIssue:"Economy",
+      candidates:{ JLP:"Corey David Dunkley", PNP:null, JPP:"Carla Glenece Francis-Edie" },
+      support:{ JLP:64, JPP:36 } },
+    { id:"sae", name:"St. Andrew Eastern", parish:"St. Andrew", topIssue:"Crime",
+      candidates:{ JLP:"Fayval Williams", PNP:null, JPP:null },
+      support:{ JLP:100 } },
+    { id:"scec", name:"St. Catherine East Central", parish:"St. Catherine", topIssue:"Healthcare",
+      candidates:{ JLP:"Alando Terrelonge", PNP:null, JPP:null },
+      support:{ JLP:100 } }
+  ];
+
+  const TIMELINE = [
+    { t:"The Call", d:"The Prime Minister advises the Governor-General to dissolve Parliament, setting an election in motion." },
+    { t:"Proclamation", d:"The Governor-General signs proclamations dissolving Parliament and naming the election date." },
+    { t:"The Writ", d:"The Director of Elections sends a Writ of Election to each of the 63 Returning Officers, giving them legal authority to run the vote." },
+    { t:"Nomination Day", d:"Candidates formally register to contest their constituency." },
+    { t:"Polling Day", d:"Stations open 7:00 a.m.–5:00 p.m. Voters are verified, vote in private, then mark a finger with indelible ink." },
+    { t:"The Count", d:"Counting starts the moment polls close. Whoever gets the most votes in a constituency wins that seat." },
+    { t:"Forming the Government", d:"Whichever party wins the majority of the 63 seats forms the government — its leader becomes Prime Minister." }
+  ];
+
+  let state = null; // set on begin campaign
+
+  /* ---------------- NAV ---------------- */
+  function showScreen(id){
+    document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+    document.querySelectorAll(".navlinks button").forEach(b=>{
+      b.classList.toggle("current", b.dataset.goto===id);
+    });
+    window.scrollTo({top:0, behavior:"instant" in window ? "instant":"auto"});
+  }
+  document.querySelectorAll("[data-goto]").forEach(el=>{
+    el.addEventListener("click", ()=> showScreen(el.dataset.goto));
+  });
+
+  function stampFx(btn){
+    btn.classList.remove("hit"); void btn.offsetWidth; btn.classList.add("hit");
+  }
+  document.querySelectorAll(".btn.stamped").forEach(b=> b.addEventListener("click", ()=>stampFx(b)));
+
+  /* ---------------- LEARN TIMELINE ---------------- */
+  const tlEl = document.getElementById("timeline");
+  TIMELINE.forEach((item, i)=>{
+    const div = document.createElement("div");
+    div.className = "tl-item";
+    div.innerHTML = `<div class="tl-marker">${i+1}</div><div class="tl-body"><h3>${item.t}</h3><p>${item.d}</p></div>`;
+    tlEl.appendChild(div);
+  });
+
+  /* ---------------- HOW TO VOTE ---------------- */
+  const voteSteps = document.querySelectorAll(".vote-step");
+  const voteProgress = document.getElementById("voteProgress");
+  voteSteps.forEach(()=>{
+    const s = document.createElement("span"); voteProgress.appendChild(s);
+  });
+  let voteIdx = 0;
+  function renderVoteProgress(){
+    [...voteProgress.children].forEach((c,i)=> c.classList.toggle("done", i<=voteIdx));
+  }
+  renderVoteProgress();
+  document.querySelectorAll("[data-vote-next]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      voteSteps[voteIdx].classList.remove("active");
+      voteIdx = Math.min(voteIdx+1, voteSteps.length-1);
+      voteSteps[voteIdx].classList.add("active");
+      renderVoteProgress();
+    });
+  });
+  // ballot mini-demo
+  const ballotDemo = document.getElementById("ballotDemo");
+  const demoNames = [
+    {p:"JLP", n:"Sample Candidate A"},
+    {p:"PNP", n:"Sample Candidate B"},
+    {p:"JPP", n:"Sample Candidate C"}
+  ];
+  demoNames.forEach(c=>{
+    const row = document.createElement("div");
+    row.className = "ballot-row";
+    row.innerHTML = `<span>${c.n} <small style="color:#777;">(${c.p})</small></span><span class="mark"></span>`;
+    row.addEventListener("click", ()=>{
+      ballotDemo.querySelectorAll(".ballot-row").forEach(r=>{ r.classList.remove("marked"); r.querySelector(".mark").textContent=""; });
+      row.classList.add("marked");
+      row.querySelector(".mark").textContent = "✕";
+      document.getElementById("ballotNextBtn").disabled = false;
+    });
+    ballotDemo.appendChild(row);
+  });
+
+  /* ---------------- PARTY PICK ---------------- */
+  const partyGrid = document.getElementById("partyGrid");
+  let chosenParty = null;
+  Object.values(PARTIES).forEach(p=>{
+    const card = document.createElement("div");
+    card.className = "party-card";
+    card.tabIndex = 0;
+    card.innerHTML = `<div class="party-swatch" style="background:${p.color}"></div>
+      <h3>${p.abbr}</h3><p>${p.name}</p><p>Leader: ${p.leader}</p>`;
+    card.addEventListener("click", ()=>{
+      partyGrid.querySelectorAll(".party-card").forEach(c=>c.classList.remove("selected"));
+      card.classList.add("selected");
+      chosenParty = p.abbr;
+      document.getElementById("beginCampaignBtn").disabled = false;
+    });
+    partyGrid.appendChild(card);
+  });
+
+  document.getElementById("beginCampaignBtn").addEventListener("click", ()=>{
+    if(!chosenParty) return;
+    startCampaign(chosenParty);
+    showScreen("screen-campaign");
+  });
+
+  /* ---------------- CAMPAIGN STATE ---------------- */
+  function cloneConstituencies(){
+    return CONSTITUENCIES.map(c=>({...c, support:{...c.support}}));
+  }
+
+  function startCampaign(partyAbbr){
+    state = {
+      party: partyAbbr,
+      budget: 100,
+      selected: null,
+      consts: cloneConstituencies()
+    };
+    document.getElementById("campaignPartyLabel").textContent =
+      `Running for the ${PARTIES[partyAbbr].abbr} — ${PARTIES[partyAbbr].leader}`;
+    renderCampaign();
+  }
+
+  function contestants(c){
+    return Object.keys(c.support);
+  }
+
+  function renderCampaign(){
+    document.getElementById("budgetFill").style.width = state.budget + "%";
+    document.getElementById("budgetLabel").textContent = state.budget + " / 100";
+
+    const list = document.getElementById("constList");
+    list.innerHTML = "";
+    state.consts.forEach(c=>{
+      const div = document.createElement("div");
+      div.className = "const-card" + (state.selected===c.id ? " active":"");
+      const contested = contestants(c).length > 1;
+      let barsHtml = "";
+      contestants(c).forEach(ab=>{
+        barsHtml += `<div class="bar-row">
+          <span class="label" style="color:${PARTIES[ab].color}">${ab}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${c.support[ab]}%; background:${PARTIES[ab].color}"></div></div>
+          <span class="pct">${Math.round(c.support[ab])}%</span>
+        </div>`;
+      });
+      div.innerHTML = `<h4>${c.name} ${!contested ? '<span class="uncontested-tag">Uncontested</span>':''}<span class="parish">${c.parish}</span></h4>${barsHtml}`;
+      div.addEventListener("click", ()=>{
+        if(!contested){ state.selected = null; renderCampaign(); return; }
+        state.selected = c.id;
+        renderCampaign();
+      });
+      list.appendChild(div);
+    });
+
+    const sel = state.consts.find(c=>c.id===state.selected);
+    document.getElementById("selectedConstLabel").textContent = sel
+      ? `Campaigning in: ${sel.name}`
+      : "Select a contested constituency →";
+
+    document.querySelectorAll("[data-action]").forEach(btn=>{
+      const costs = { canvass:10, rally:20, debate:25, ad:30 };
+      const cost = costs[btn.dataset.action];
+      const needsSelection = btn.dataset.action !== "ad";
+      btn.disabled = state.budget < cost || (needsSelection && !sel);
+    });
+  }
+
+  function nudge(c, party, amount){
+    if(c.support[party]===undefined) return;
+    c.support[party] = Math.max(0, c.support[party]+amount);
+    // renormalize to 100
+    const total = contestants(c).reduce((s,k)=>s+c.support[k],0);
+    contestants(c).forEach(k=> c.support[k] = c.support[k]/total*100 );
+  }
+
+  document.querySelectorAll("[data-action]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const action = btn.dataset.action;
+      const costs = { canvass:10, rally:20, debate:25, ad:30 };
+      const cost = costs[action];
+      if(state.budget < cost) return;
+      const sel = state.consts.find(c=>c.id===state.selected);
+
+      if(action==="ad"){
+        state.budget -= cost;
+        state.consts.forEach(c=>{ if(c.support[state.party]!==undefined) nudge(c, state.party, 5); });
+        renderCampaign();
+        return;
+      }
+      if(!sel) return;
+
+      if(action==="canvass"){
+        state.budget -= cost;
+        nudge(sel, state.party, 6);
+        renderCampaign();
+      } else if(action==="rally"){
+        state.budget -= cost;
+        nudge(sel, state.party, 11);
+        contestants(sel).forEach(k=>{ if(k!==state.party) nudge(sel,k,-1.5); });
+        renderCampaign();
+      } else if(action==="debate"){
+        openQuiz(sel, cost);
+      }
+    });
+  });
+
+  /* ---------------- DEBATE QUIZ ---------------- */
+  const quizOverlay = document.getElementById("quizOverlay");
+  function openQuiz(sel, cost){
+    document.getElementById("quizPrompt").textContent =
+      `What do you think voters in ${sel.name} care about most right now?`;
+    const optsEl = document.getElementById("quizOpts");
+    optsEl.innerHTML = "";
+    ISSUES.forEach(issue=>{
+      const b = document.createElement("button");
+      b.className = "btn secondary stamped";
+      b.textContent = issue;
+      b.addEventListener("click", ()=>{
+        stampFx(b);
+        state.budget -= cost;
+        if(issue===sel.topIssue){
+          nudge(sel, state.party, 14);
+        } else {
+          nudge(sel, state.party, 4);
+        }
+        quizOverlay.classList.remove("active");
+        renderCampaign();
+      });
+      optsEl.appendChild(b);
+    });
+    quizOverlay.classList.add("active");
+  }
+  quizOverlay.addEventListener("click", e=>{ if(e.target===quizOverlay) quizOverlay.classList.remove("active"); });
+
+  /* ---------------- CALL ELECTION / NIGHT ---------------- */
+  document.getElementById("callElectionBtn").addEventListener("click", ()=>{
+    runElectionNight();
+    showScreen("screen-night");
+  });
+
+  function runElectionNight(){
+    const resultsList = document.getElementById("resultsList");
+    resultsList.innerHTML = "";
+    document.getElementById("nightNextRow").style.display = "none";
+
+    const finalResults = state.consts.map(c=>{
+      const tallied = {};
+      contestants(c).forEach(ab=>{
+        const variance = (Math.random()*10)-5; // turnout unpredictability
+        tallied[ab] = Math.max(0, c.support[ab]+variance);
+      });
+      const winner = Object.keys(tallied).reduce((a,b)=> tallied[a]>tallied[b]?a:b);
+      return { name:c.name, winner, tallied };
+    });
+    state.finalResults = finalResults;
+
+    let i = 0;
+    function revealNext(){
+      if(i>=finalResults.length){
+        document.getElementById("nightNextRow").style.display = "flex";
+        return;
+      }
+      const r = finalResults[i];
+      const row = document.createElement("div");
+      row.className = "result-row";
+      row.innerHTML = `<span class="winner-dot" style="background:${PARTIES[r.winner].color}"></span>
+        <span class="rname">${r.name}</span>
+        <span class="rwinner">Won by <b style="color:${PARTIES[r.winner].color}">${r.winner}</b></span>
+        <span class="ink-stamp-mark">🖊️</span>`;
+      resultsList.appendChild(row);
+      requestAnimationFrame(()=> row.classList.add("show"));
+      i++;
+      setTimeout(revealNext, 550);
+    }
+    revealNext();
+  }
+
+  document.getElementById("showScoreboardBtn").addEventListener("click", ()=>{
+    renderFinal();
+    showScreen("screen-final");
+  });
+
+  function renderFinal(){
+    const seatCounts = { JLP:0, PNP:0, JPP:0 };
+    state.finalResults.forEach(r=> seatCounts[r.winner]++ );
+    const board = document.getElementById("scoreboard");
+    board.innerHTML = "";
+    Object.entries(seatCounts).forEach(([ab,n])=>{
+      const tile = document.createElement("div");
+      tile.className = "seat-tile";
+      tile.style.background = PARTIES[ab].color;
+      tile.innerHTML = `<span class="n">${n}</span>${ab} seat${n===1?'':'s'}`;
+      board.appendChild(tile);
+    });
+    const winningParty = Object.keys(seatCounts).reduce((a,b)=> seatCounts[a]>=seatCounts[b]?a:b);
+    document.getElementById("winnerHeadline").textContent =
+      `The ${PARTIES[winningParty].name} wins!`;
+    document.getElementById("pmLine").textContent =
+      `${PARTIES[winningParty].leader} becomes Prime Minister with ${seatCounts[winningParty]} of 7 seats.`;
+    launchConfetti();
+  }
+
+  document.getElementById("playAgainBtn").addEventListener("click", ()=>{
+    chosenParty = null;
+    document.getElementById("beginCampaignBtn").disabled = true;
+    partyGrid.querySelectorAll(".party-card").forEach(c=>c.classList.remove("selected"));
+    showScreen("screen-party");
+  });
+
+  /* ---------------- CONFETTI ---------------- */
+  function launchConfetti(){
+    const colors = ["#0A7B3E","#F5B700","#E8552A","#1C8FA6","#111311"];
+    for(let i=0;i<40;i++){
+      const c = document.createElement("div");
+      c.className = "confetti";
+      c.style.left = Math.random()*100+"vw";
+      c.style.background = colors[Math.floor(Math.random()*colors.length)];
+      c.style.transform = `rotate(${Math.random()*360}deg)`;
+      document.body.appendChild(c);
+      const duration = 1800 + Math.random()*1200;
+      c.animate([
+        { transform:`translateY(0) rotate(0deg)`, opacity:1 },
+        { transform:`translateY(100vh) rotate(${360+Math.random()*360}deg)`, opacity:0.9 }
+      ], { duration, easing:"ease-in" });
+      setTimeout(()=> c.remove(), duration+50);
+    }
+  }
+
+})();
+</script>
+</body>
+</html>
